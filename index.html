@@ -471,6 +471,89 @@
       }
 
     }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(2, 6, 23, 0.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(440px, 100%);
+      padding: 18px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.98);
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    .modal h2 {
+      margin: 0 0 14px;
+      font-size: 1.35rem;
+      letter-spacing: -0.04em;
+    }
+
+    .modal label {
+      display: block;
+      margin: 14px 0 8px;
+      font-weight: 950;
+    }
+
+    .edit-gang-picker {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 9px;
+      margin-top: 8px;
+    }
+
+    .edit-gang-option {
+      aspect-ratio: 1;
+      border-radius: 18px;
+      background: #f3f4f6;
+      color: #374151;
+      font-size: 1.15rem;
+      font-weight: 950;
+    }
+
+    .edit-gang-option.active {
+      background: #111827;
+      color: white;
+      box-shadow: 0 10px 25px rgba(17, 24, 39, 0.25);
+    }
+
+    .modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .modal-actions button {
+      min-height: 50px;
+      border-radius: 18px;
+      font-weight: 950;
+    }
+
+    .cancel-button {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .save-button {
+      background: var(--accent);
+      color: white;
+    }
+
   </style>
 </head>
 
@@ -536,6 +619,24 @@
     </section>
   </main>
 
+
+  <div id="editModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+      <h2 id="editModalTitle">Artikel bearbeiten</h2>
+
+      <label for="editItemName">Artikelname</label>
+      <input id="editItemName" type="text" autocomplete="off" />
+
+      <label>Gang auswählen</label>
+      <div id="editGangPicker" class="edit-gang-picker"></div>
+
+      <div class="modal-actions">
+        <button id="cancelEditButton" class="cancel-button" type="button">Abbrechen</button>
+        <button id="saveEditButton" class="save-button" type="button">Speichern</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const STORAGE_KEY = "einkaufsliste.app.ohne.erledigte.loeschen.v1";
     const gangs = [1,2,3,4,5,6,7,8,9,10];
@@ -544,6 +645,8 @@
     let sortMode = "gang";
     let items = loadItems();
     let openJumpIndex = -1;
+    let editingItemId = null;
+    let selectedEditGang = 1;
 
     const itemForm = document.querySelector("#itemForm");
     const itemName = document.querySelector("#itemName");
@@ -560,6 +663,12 @@
     const exportButton = document.querySelector("#exportButton");
     const importFile = document.querySelector("#importFile");
     const finishShoppingButton = document.querySelector("#finishShoppingButton");
+
+    const editModal = document.querySelector("#editModal");
+    const editItemName = document.querySelector("#editItemName");
+    const editGangPicker = document.querySelector("#editGangPicker");
+    const cancelEditButton = document.querySelector("#cancelEditButton");
+    const saveEditButton = document.querySelector("#saveEditButton");
 
     function createId() {
       return crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random();
@@ -847,37 +956,79 @@
         return;
       }
 
-      const oldGang = item.gang;
-      const newName = prompt("Artikel bearbeiten:", item.name);
+      editingItemId = id;
+      selectedEditGang = item.gang;
+      editItemName.value = item.name;
 
-      if (newName === null) {
+      renderEditGangPicker();
+      openEditModal();
+
+      window.setTimeout(() => {
+        editItemName.focus();
+        editItemName.select();
+      }, 60);
+    }
+
+    function renderEditGangPicker() {
+      editGangPicker.innerHTML = "";
+
+      gangs.forEach(gang => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "edit-gang-option";
+        button.textContent = gang;
+
+        if (gang === selectedEditGang) {
+          button.classList.add("active");
+        }
+
+        button.addEventListener("click", () => {
+          selectedEditGang = gang;
+          renderEditGangPicker();
+        });
+
+        editGangPicker.appendChild(button);
+      });
+    }
+
+    function openEditModal() {
+      editModal.classList.add("open");
+      editModal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeEditModal() {
+      editModal.classList.remove("open");
+      editModal.setAttribute("aria-hidden", "true");
+      editingItemId = null;
+    }
+
+    function saveEditedItem() {
+      const item = items.find(entry => entry.id === editingItemId);
+
+      if (!item) {
+        closeEditModal();
         return;
       }
 
-      const trimmedName = newName.trim();
+      const trimmedName = editItemName.value.trim();
 
       if (!trimmedName) {
         alert("Der Artikelname darf nicht leer sein.");
         return;
       }
 
-      const newGangText = prompt("Gang bearbeiten: Zahl von 1 bis 10", item.gang);
-      const newGang = Number(newGangText);
-
-      if (!Number.isInteger(newGang) || newGang < 1 || newGang > 10) {
-        alert("Bitte einen Gang von 1 bis 10 eingeben.");
-        return;
-      }
+      const oldGang = item.gang;
 
       item.name = trimmedName;
-      item.gang = newGang;
+      item.gang = selectedEditGang;
 
-      if (newGang !== oldGang) {
+      if (selectedEditGang !== oldGang) {
         moveItemToEndOfGang(item);
       }
 
       saveItems();
       renderList();
+      closeEditModal();
     }
 
     function deleteItem(id) {
@@ -1027,6 +1178,24 @@
 
     openStatButton.addEventListener("click", jumpToNextOpenItem);
     finishShoppingButton.addEventListener("click", finishShopping);
+    cancelEditButton.addEventListener("click", closeEditModal);
+    saveEditButton.addEventListener("click", saveEditedItem);
+
+    editModal.addEventListener("click", event => {
+      if (event.target === editModal) {
+        closeEditModal();
+      }
+    });
+
+    editItemName.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        saveEditedItem();
+      }
+
+      if (event.key === "Escape") {
+        closeEditModal();
+      }
+    });
 
     exportButton.addEventListener("click", exportItems);
 
