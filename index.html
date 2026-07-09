@@ -2,85 +2,109 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
 
-  <title>Einkaufsliste nach Gang</title>
+  <title>Einkaufsliste App</title>
 
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-  <main class="app">
-    <header class="header">
-      <div class="header-icon">🛒</div>
-      <h1>Einkaufsliste</h1>
-      <p>Sortiere deine Artikel nach Gang-Reihenfolge oder alphabetisch.</p>
+  <main class="phone-app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Supermarkt</p>
+        <h1>Einkaufsliste</h1>
+      </div>
+
+      <button id="clearDoneButton" class="small-action" type="button">
+        Erledigte löschen
+      </button>
     </header>
 
-    <section class="card">
-      <form id="itemForm" class="form">
-        <div class="field">
-          <label for="itemName">Artikel</label>
+    <section class="stats-card">
+      <div>
+        <strong id="openCount">0</strong>
+        <span>offen</span>
+      </div>
+
+      <div>
+        <strong id="totalCount">0</strong>
+        <span>gesamt</span>
+      </div>
+
+      <div>
+        <strong id="doneCount">0</strong>
+        <span>erledigt</span>
+      </div>
+    </section>
+
+    <section class="add-card">
+      <form id="itemForm">
+        <label for="itemName">Artikel hinzufügen</label>
+
+        <div class="add-row">
           <input
             id="itemName"
             type="text"
-            placeholder="z. B. Milch, Bananen, Brot"
+            placeholder="z. B. Milch"
             autocomplete="off"
             required
           />
+
+          <button class="add-button" type="submit" aria-label="Hinzufügen">
+            +
+          </button>
         </div>
 
-        <div class="field">
-          <label for="itemAisle">Gang</label>
-          <select id="itemAisle" required></select>
+        <div class="gang-header">
+          <span>Gang auswählen</span>
+          <strong id="selectedGangLabel">Gang 1</strong>
         </div>
 
-        <button type="submit" class="primary-button">Hinzufügen</button>
+        <div id="gangPicker" class="gang-picker" aria-label="Gang auswählen"></div>
       </form>
     </section>
 
-    <section class="toolbar">
-      <div class="toolbar-group">
-        <label for="sortMode">Sortierung</label>
-        <select id="sortMode">
-          <option value="aisle">Nach Gang</option>
-          <option value="alphabetical">Alphabetisch</option>
-        </select>
-      </div>
+    <section class="sort-card">
+      <button class="sort-button active" type="button" data-sort="gang">
+        Nach Gang
+      </button>
 
-      <div class="toolbar-group">
-        <button id="exportButton" type="button" class="secondary-button">Export</button>
-
-        <label class="import-button" for="importFile">
-          Import
-          <input id="importFile" type="file" accept="application/json,.json" />
-        </label>
-
-        <button id="clearDoneButton" type="button" class="secondary-button">Erledigte löschen</button>
-      </div>
-    </section>
-
-    <section class="summary">
-      <span id="itemCount">0 Artikel</span>
-      <span id="doneCount">0 erledigt</span>
+      <button class="sort-button" type="button" data-sort="alphabetical">
+        A–Z
+      </button>
     </section>
 
     <section id="shoppingList" class="shopping-list"></section>
+
+    <section class="utility-card">
+      <button id="exportButton" type="button">Liste exportieren</button>
+
+      <label for="importFile">
+        Liste importieren
+        <input id="importFile" type="file" accept="application/json,.json" />
+      </label>
+    </section>
   </main>
 
   <template id="itemTemplate">
     <article class="item">
-      <label class="item-check">
-        <input type="checkbox" />
-        <span class="item-text">
-          <strong class="item-name"></strong>
-          <small class="item-aisle"></small>
-        </span>
-      </label>
+      <button class="check-button" type="button" aria-label="Erledigt markieren">
+        ✓
+      </button>
+
+      <div class="item-main">
+        <strong class="item-name"></strong>
+        <span class="item-meta"></span>
+      </div>
 
       <div class="item-actions">
-        <button type="button" class="icon-button edit-button" title="Bearbeiten">✏️</button>
-        <button type="button" class="icon-button delete-button" title="Löschen">🗑️</button>
+        <button class="edit-button" type="button" aria-label="Bearbeiten">✎</button>
+        <button class="delete-button" type="button" aria-label="Löschen">×</button>
       </div>
     </article>
   </template>
