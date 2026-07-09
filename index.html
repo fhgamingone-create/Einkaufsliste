@@ -4,60 +4,416 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
+  <title>Einkaufsliste</title>
 
-  <title>Einkaufsliste App</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css" />
+    :root {
+      --bg: #0f172a;
+      --white: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --accent: #22c55e;
+      --accent-dark: #16a34a;
+      --danger: #ef4444;
+      --border: rgba(17, 24, 39, 0.08);
+      --glass: rgba(255, 255, 255, 0.16);
+      --card: rgba(255, 255, 255, 0.95);
+      --shadow: 0 22px 60px rgba(0, 0, 0, 0.32);
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--white);
+      background:
+        radial-gradient(circle at top left, rgba(34, 197, 94, 0.42), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.34), transparent 34%),
+        linear-gradient(135deg, #020617, #111827 55%, #0f172a);
+    }
+
+    button,
+    input,
+    label {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      width: min(520px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 22px 16px 34px;
+    }
+
+    .topbar {
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: rgba(255, 255, 255, 0.68);
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 9vw, 3.1rem);
+      line-height: 0.95;
+      letter-spacing: -0.06em;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .stat {
+      padding: 15px 12px;
+      border-radius: 22px;
+      background: var(--glass);
+      backdrop-filter: blur(14px);
+      text-align: center;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.7rem;
+      line-height: 1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 5px;
+      color: rgba(255, 255, 255, 0.68);
+      font-size: 0.8rem;
+      font-weight: 750;
+    }
+
+    .card {
+      border-radius: 28px;
+      background: var(--card);
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    .add-card {
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .add-card label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 950;
+      letter-spacing: -0.02em;
+    }
+
+    .add-row {
+      display: grid;
+      grid-template-columns: 1fr 58px;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    input {
+      width: 100%;
+      min-height: 56px;
+      padding: 0 16px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #f9fafb;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: rgba(34, 197, 94, 0.7);
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16);
+    }
+
+    .add-button {
+      width: 58px;
+      height: 56px;
+      border-radius: 18px;
+      background: var(--accent);
+      color: white;
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+      box-shadow: 0 12px 26px rgba(34, 197, 94, 0.35);
+    }
+
+    .gang-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 850;
+    }
+
+    .gang-header strong {
+      color: var(--accent-dark);
+    }
+
+    .gang-picker {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 9px;
+    }
+
+    .gang-option {
+      aspect-ratio: 1;
+      border-radius: 18px;
+      background: #f3f4f6;
+      color: #374151;
+      font-size: 1.15rem;
+      font-weight: 950;
+    }
+
+    .gang-option.active {
+      background: #111827;
+      color: white;
+      box-shadow: 0 10px 25px rgba(17, 24, 39, 0.25);
+    }
+
+    .sort-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 8px;
+      margin-bottom: 14px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(14px);
+    }
+
+    .sort-button {
+      min-height: 48px;
+      border-radius: 18px;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.78);
+      font-weight: 950;
+    }
+
+    .sort-button.active {
+      background: white;
+      color: #111827;
+    }
+
+    .shopping-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .section {
+      overflow: hidden;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: var(--shadow);
+      color: var(--text);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 17px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #f9fafb, #eef2ff);
+      font-weight: 950;
+    }
+
+    .badge {
+      min-width: 34px;
+      height: 34px;
+      display: inline-grid;
+      place-items: center;
+      margin-right: 9px;
+      border-radius: 12px;
+      background: #111827;
+      color: white;
+    }
+
+    .count {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .item {
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 70px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      background: white;
+    }
+
+    .item:last-child {
+      border-bottom: 0;
+    }
+
+    .check {
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      border: 2px solid #d1d5db;
+      background: #f9fafb;
+      color: transparent;
+      font-size: 1.15rem;
+      font-weight: 950;
+    }
+
+    .item.done .check {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: white;
+    }
+
+    .item-name {
+      display: block;
+      overflow-wrap: anywhere;
+      font-size: 1.04rem;
+      letter-spacing: -0.02em;
+    }
+
+    .item-meta {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 750;
+    }
+
+    .item.done .item-name {
+      color: #9ca3af;
+      text-decoration: line-through;
+    }
+
+    .actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .edit,
+    .delete {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      background: #f3f4f6;
+      color: #374151;
+      font-weight: 950;
+    }
+
+    .delete {
+      color: var(--danger);
+    }
+
+    .empty {
+      padding: 30px 18px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.95);
+      color: var(--text);
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .empty strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 1.2rem;
+    }
+
+    .empty span {
+      color: var(--muted);
+    }
+
+    .utility {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(14px);
+    }
+
+    .utility button,
+    .utility label {
+      display: grid;
+      place-items: center;
+      min-height: 48px;
+      padding: 0 12px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.88);
+      color: #111827;
+      font-size: 0.88rem;
+      font-weight: 950;
+      text-align: center;
+    }
+
+    .utility input {
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
-  <main class="phone-app">
+  <main class="app">
     <header class="topbar">
-      <div>
-        <p class="eyebrow">Supermarkt</p>
-        <h1>Einkaufsliste</h1>
-      </div>
-
-      <button id="clearDoneButton" class="small-action" type="button">
-        Erledigte löschen
-      </button>
+      <p class="eyebrow">Supermarkt</p>
+      <h1>Einkaufsliste</h1>
     </header>
 
-    <section class="stats-card">
-      <div>
+    <section class="stats">
+      <div class="stat">
         <strong id="openCount">0</strong>
         <span>offen</span>
       </div>
-
-      <div>
+      <div class="stat">
         <strong id="totalCount">0</strong>
         <span>gesamt</span>
       </div>
-
-      <div>
+      <div class="stat">
         <strong id="doneCount">0</strong>
         <span>erledigt</span>
       </div>
     </section>
 
-    <section class="add-card">
+    <section class="card add-card">
       <form id="itemForm">
         <label for="itemName">Artikel hinzufügen</label>
 
         <div class="add-row">
-          <input
-            id="itemName"
-            type="text"
-            placeholder="z. B. Milch"
-            autocomplete="off"
-            required
-          />
-
-          <button class="add-button" type="submit" aria-label="Hinzufügen">
-            +
-          </button>
+          <input id="itemName" type="text" placeholder="z. B. Milch" autocomplete="off" required />
+          <button class="add-button" type="submit" aria-label="Hinzufügen">+</button>
         </div>
 
         <div class="gang-header">
@@ -65,50 +421,378 @@
           <strong id="selectedGangLabel">Gang 1</strong>
         </div>
 
-        <div id="gangPicker" class="gang-picker" aria-label="Gang auswählen"></div>
+        <div id="gangPicker" class="gang-picker"></div>
       </form>
     </section>
 
     <section class="sort-card">
-      <button class="sort-button active" type="button" data-sort="gang">
-        Nach Gang
-      </button>
-
-      <button class="sort-button" type="button" data-sort="alphabetical">
-        A–Z
-      </button>
+      <button class="sort-button active" type="button" data-sort="gang">Nach Gang</button>
+      <button class="sort-button" type="button" data-sort="alphabetical">A–Z</button>
     </section>
 
     <section id="shoppingList" class="shopping-list"></section>
 
-    <section class="utility-card">
-      <button id="exportButton" type="button">Liste exportieren</button>
-
+    <section class="utility">
+      <button id="exportButton" type="button">Export</button>
       <label for="importFile">
-        Liste importieren
+        Import
         <input id="importFile" type="file" accept="application/json,.json" />
       </label>
     </section>
   </main>
 
-  <template id="itemTemplate">
-    <article class="item">
-      <button class="check-button" type="button" aria-label="Erledigt markieren">
-        ✓
-      </button>
+  <script>
+    const STORAGE_KEY = "einkaufsliste.app.ohne.erledigte.loeschen.v1";
+    const gangs = [1,2,3,4,5,6,7,8,9,10];
 
-      <div class="item-main">
-        <strong class="item-name"></strong>
-        <span class="item-meta"></span>
-      </div>
+    let selectedGang = 1;
+    let sortMode = "gang";
+    let items = loadItems();
 
-      <div class="item-actions">
-        <button class="edit-button" type="button" aria-label="Bearbeiten">✎</button>
-        <button class="delete-button" type="button" aria-label="Löschen">×</button>
-      </div>
-    </article>
-  </template>
+    const itemForm = document.querySelector("#itemForm");
+    const itemName = document.querySelector("#itemName");
+    const gangPicker = document.querySelector("#gangPicker");
+    const selectedGangLabel = document.querySelector("#selectedGangLabel");
+    const sortButtons = document.querySelectorAll(".sort-button");
+    const shoppingList = document.querySelector("#shoppingList");
 
-  <script src="script.js"></script>
+    const openCount = document.querySelector("#openCount");
+    const totalCount = document.querySelector("#totalCount");
+    const doneCount = document.querySelector("#doneCount");
+
+    const exportButton = document.querySelector("#exportButton");
+    const importFile = document.querySelector("#importFile");
+
+    function createId() {
+      return crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random();
+    }
+
+    function loadItems() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+
+      if (!saved) {
+        return [];
+      }
+
+      try {
+        return JSON.parse(saved).map(normalizeItem).filter(item => item.name);
+      } catch {
+        return [];
+      }
+    }
+
+    function normalizeItem(item) {
+      return {
+        id: item.id || createId(),
+        name: String(item.name || "").trim(),
+        gang: Number(item.gang || 1),
+        done: Boolean(item.done)
+      };
+    }
+
+    function saveItems() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function renderGangPicker() {
+      gangPicker.innerHTML = "";
+
+      gangs.forEach(gang => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "gang-option";
+        button.textContent = gang;
+
+        if (gang === selectedGang) {
+          button.classList.add("active");
+        }
+
+        button.addEventListener("click", () => {
+          selectedGang = gang;
+          selectedGangLabel.textContent = "Gang " + gang;
+          renderGangPicker();
+        });
+
+        gangPicker.appendChild(button);
+      });
+    }
+
+    function renderStats() {
+      const total = items.length;
+      const done = items.filter(item => item.done).length;
+
+      totalCount.textContent = total;
+      doneCount.textContent = done;
+      openCount.textContent = total - done;
+    }
+
+    function getSortedItems() {
+      const copy = [...items];
+
+      if (sortMode === "alphabetical") {
+        return copy.sort((a, b) => a.name.localeCompare(b.name, "de"));
+      }
+
+      return copy.sort((a, b) => {
+        if (a.gang !== b.gang) {
+          return a.gang - b.gang;
+        }
+
+        return a.name.localeCompare(b.name, "de");
+      });
+    }
+
+    function renderList() {
+      shoppingList.innerHTML = "";
+      renderStats();
+
+      if (items.length === 0) {
+        shoppingList.innerHTML = `
+          <div class="empty">
+            <strong>Noch keine Artikel</strong>
+            <span>Füge oben deinen ersten Einkauf hinzu.</span>
+          </div>
+        `;
+        return;
+      }
+
+      if (sortMode === "alphabetical") {
+        renderAlphabetical();
+      } else {
+        renderByGang();
+      }
+    }
+
+    function renderByGang() {
+      const sorted = getSortedItems();
+
+      gangs.forEach(gang => {
+        const gangItems = sorted.filter(item => item.gang === gang);
+
+        if (gangItems.length === 0) {
+          return;
+        }
+
+        const section = createSection("Gang " + gang, gang, gangItems.length);
+
+        gangItems.forEach(item => {
+          section.appendChild(createItem(item, false));
+        });
+
+        shoppingList.appendChild(section);
+      });
+    }
+
+    function renderAlphabetical() {
+      const section = createSection("Alphabetisch", "A–Z", items.length);
+
+      getSortedItems().forEach(item => {
+        section.appendChild(createItem(item, true));
+      });
+
+      shoppingList.appendChild(section);
+    }
+
+    function createSection(title, badge, count) {
+      const section = document.createElement("section");
+      section.className = "section";
+
+      const header = document.createElement("div");
+      header.className = "section-title";
+      header.innerHTML = `
+        <span><span class="badge">${badge}</span>${title}</span>
+        <span class="count">${count}</span>
+      `;
+
+      section.appendChild(header);
+      return section;
+    }
+
+    function createItem(item, showGang) {
+      const article = document.createElement("article");
+      article.className = item.done ? "item done" : "item";
+
+      article.innerHTML = `
+        <button class="check" type="button" aria-label="Abhaken">✓</button>
+        <div>
+          <strong class="item-name"></strong>
+          <span class="item-meta"></span>
+        </div>
+        <div class="actions">
+          <button class="edit" type="button" aria-label="Bearbeiten">✎</button>
+          <button class="delete" type="button" aria-label="Löschen">×</button>
+        </div>
+      `;
+
+      article.querySelector(".item-name").textContent = item.name;
+      article.querySelector(".item-meta").textContent = showGang ? "Gang " + item.gang : (item.done ? "erledigt" : "offen");
+
+      article.querySelector(".check").addEventListener("click", () => {
+        item.done = !item.done;
+        saveItems();
+        renderList();
+      });
+
+      article.querySelector(".edit").addEventListener("click", () => {
+        editItem(item.id);
+      });
+
+      article.querySelector(".delete").addEventListener("click", () => {
+        deleteItem(item.id);
+      });
+
+      return article;
+    }
+
+    function editItem(id) {
+      const item = items.find(entry => entry.id === id);
+
+      if (!item) {
+        return;
+      }
+
+      const newName = prompt("Artikel bearbeiten:", item.name);
+
+      if (newName === null) {
+        return;
+      }
+
+      const trimmedName = newName.trim();
+
+      if (!trimmedName) {
+        alert("Der Artikelname darf nicht leer sein.");
+        return;
+      }
+
+      const newGangText = prompt("Gang bearbeiten: Zahl von 1 bis 10", item.gang);
+      const newGang = Number(newGangText);
+
+      if (!Number.isInteger(newGang) || newGang < 1 || newGang > 10) {
+        alert("Bitte einen Gang von 1 bis 10 eingeben.");
+        return;
+      }
+
+      item.name = trimmedName;
+      item.gang = newGang;
+
+      saveItems();
+      renderList();
+    }
+
+    function deleteItem(id) {
+      const item = items.find(entry => entry.id === id);
+
+      if (!item) {
+        return;
+      }
+
+      if (!confirm('"' + item.name + '" löschen?')) {
+        return;
+      }
+
+      items = items.filter(entry => entry.id !== id);
+      saveItems();
+      renderList();
+    }
+
+    function exportItems() {
+      const data = {
+        app: "Einkaufsliste",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        items
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json"
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "einkaufsliste-export.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importItems(file) {
+      const reader = new FileReader();
+
+      reader.addEventListener("load", () => {
+        try {
+          const imported = JSON.parse(reader.result);
+          const importedItems = Array.isArray(imported) ? imported : imported.items;
+
+          if (!Array.isArray(importedItems)) {
+            throw new Error("Keine Liste gefunden");
+          }
+
+          const normalized = importedItems
+            .map(normalizeItem)
+            .filter(item => item.name && item.gang >= 1 && item.gang <= 10);
+
+          if (!confirm("Importieren ersetzt deine aktuelle Liste. Fortfahren?")) {
+            importFile.value = "";
+            return;
+          }
+
+          items = normalized;
+          saveItems();
+          renderList();
+          importFile.value = "";
+        } catch {
+          alert("Die Datei konnte nicht importiert werden.");
+          importFile.value = "";
+        }
+      });
+
+      reader.readAsText(file);
+    }
+
+    itemForm.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const name = itemName.value.trim();
+
+      if (!name) {
+        return;
+      }
+
+      items.push({
+        id: createId(),
+        name,
+        gang: selectedGang,
+        done: false
+      });
+
+      saveItems();
+      renderList();
+
+      itemName.value = "";
+      itemName.focus();
+    });
+
+    sortButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        sortButtons.forEach(entry => entry.classList.remove("active"));
+        button.classList.add("active");
+        sortMode = button.dataset.sort;
+        renderList();
+      });
+    });
+
+    exportButton.addEventListener("click", exportItems);
+
+    importFile.addEventListener("change", () => {
+      const file = importFile.files[0];
+
+      if (file) {
+        importItems(file);
+      }
+    });
+
+    renderGangPicker();
+    renderList();
+  </script>
 </body>
 </html>
