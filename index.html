@@ -62,7 +62,27 @@
     }
 
     .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
       margin-bottom: 18px;
+    }
+
+    .finish-button {
+      min-width: 104px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      color: white;
+      background: var(--glass);
+      backdrop-filter: blur(14px);
+      font-size: 0.78rem;
+      font-weight: 850;
+      line-height: 1.15;
+    }
+
+    .finish-button:active {
+      transform: scale(0.97);
     }
 
     .eyebrow {
@@ -291,7 +311,7 @@
 
     .item {
       display: grid;
-      grid-template-columns: 44px 1fr auto;
+      grid-template-columns: 1fr auto 48px;
       align-items: center;
       gap: 12px;
       min-height: 70px;
@@ -305,13 +325,13 @@
     }
 
     .check {
-      width: 44px;
-      height: 44px;
-      border-radius: 16px;
+      width: 48px;
+      height: 48px;
+      border-radius: 18px;
       border: 2px solid #d1d5db;
       background: #f9fafb;
       color: transparent;
-      font-size: 1.15rem;
+      font-size: 1.2rem;
       font-weight: 950;
     }
 
@@ -430,7 +450,7 @@
 
     @media (max-width: 390px) {
       .item {
-        grid-template-columns: 42px 1fr auto;
+        grid-template-columns: 1fr auto 46px;
         gap: 9px;
         padding: 11px 10px;
       }
@@ -449,6 +469,11 @@
       .delete {
         width: 34px;
       }
+
+      .check {
+        width: 46px;
+        height: 46px;
+      }
     }
   </style>
 </head>
@@ -456,8 +481,14 @@
 <body>
   <main class="app">
     <header class="topbar">
-      <p class="eyebrow">Supermarkt</p>
-      <h1>Einkaufsliste</h1>
+      <div>
+        <p class="eyebrow">Supermarkt</p>
+        <h1>Einkaufsliste</h1>
+      </div>
+
+      <button id="finishShoppingButton" class="finish-button" type="button">
+        Einkauf erledigt
+      </button>
     </header>
 
     <section class="stats">
@@ -532,6 +563,7 @@
 
     const exportButton = document.querySelector("#exportButton");
     const importFile = document.querySelector("#importFile");
+    const finishShoppingButton = document.querySelector("#finishShoppingButton");
 
     function createId() {
       return crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random();
@@ -711,7 +743,6 @@
         : "";
 
       article.innerHTML = `
-        <button class="check" type="button" aria-label="Abhaken">✓</button>
         <div>
           <strong class="item-name"></strong>
           <span class="item-meta"></span>
@@ -721,6 +752,7 @@
           <button class="edit" type="button" aria-label="Bearbeiten">✎</button>
           <button class="delete" type="button" aria-label="Löschen">×</button>
         </div>
+        <button class="check" type="button" aria-label="Abhaken">✓</button>
       `;
 
       article.querySelector(".item-name").textContent = item.name;
@@ -912,6 +944,32 @@
       }, 40);
     }
 
+    function finishShopping() {
+      const doneItems = items.filter(item => item.done);
+
+      if (items.length === 0) {
+        alert("Deine Einkaufsliste ist leer.");
+        return;
+      }
+
+      if (doneItems.length === 0) {
+        alert("Es sind aktuell keine Artikel abgehakt.");
+        return;
+      }
+
+      if (!confirm("Einkauf als erledigt markieren? Alle Haken werden entfernt, aber keine Artikel gelöscht.")) {
+        return;
+      }
+
+      items.forEach(item => {
+        item.done = false;
+      });
+
+      openJumpIndex = -1;
+      saveItems();
+      renderList();
+    }
+
     function importItems(file) {
       const reader = new FileReader();
 
@@ -979,6 +1037,7 @@
     });
 
     openStatButton.addEventListener("click", jumpToNextOpenItem);
+    finishShoppingButton.addEventListener("click", finishShopping);
 
     exportButton.addEventListener("click", exportItems);
 
