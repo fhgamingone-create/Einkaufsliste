@@ -941,24 +941,17 @@
     }
 
     function finishShopping() {
-      const doneItems = items.filter(item => item.done);
-
       if (items.length === 0) {
         alert("Deine Einkaufsliste ist leer.");
         return;
       }
 
-      if (doneItems.length === 0) {
-        alert("Es sind aktuell keine Artikel abgehakt.");
-        return;
-      }
-
-      if (!confirm("Einkauf als erledigt markieren? Alle Haken werden entfernt, aber keine Artikel gelöscht.")) {
+      if (!confirm("Einkauf erledigt? Alle Artikel werden abgehakt, aber nichts wird gelöscht.")) {
         return;
       }
 
       items.forEach(item => {
-        item.done = false;
+        item.done = true;
       });
 
       openJumpIndex = -1;
