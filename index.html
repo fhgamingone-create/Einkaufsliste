@@ -16,7 +16,7 @@
       --bg: #0f172a;
       --white: #ffffff;
       --text: #111827;
-      --muted: #6b7280;
+      --muted: #64748b;
       --accent: #22c55e;
       --accent-dark: #16a34a;
       --danger: #ef4444;
@@ -317,18 +317,38 @@
     }
 
     .actions {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(4, 34px);
       gap: 6px;
     }
 
+    .actions.alphabetical {
+      grid-template-columns: repeat(2, 38px);
+    }
+
+    .move,
     .edit,
     .delete {
-      width: 38px;
       height: 38px;
       border-radius: 14px;
       background: #f3f4f6;
       color: #374151;
       font-weight: 950;
+    }
+
+    .move {
+      width: 34px;
+      color: #0f172a;
+    }
+
+    .move:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .edit,
+    .delete {
+      width: 38px;
     }
 
     .delete {
@@ -381,6 +401,29 @@
 
     .utility input {
       display: none;
+    }
+
+    @media (max-width: 390px) {
+      .item {
+        grid-template-columns: 42px 1fr auto;
+        gap: 9px;
+        padding: 11px 10px;
+      }
+
+      .actions {
+        grid-template-columns: repeat(2, 34px);
+      }
+
+      .move,
+      .edit,
+      .delete {
+        height: 34px;
+      }
+
+      .edit,
+      .delete {
+        width: 34px;
+      }
     }
   </style>
 </head>
@@ -526,19 +569,23 @@
       openCount.textContent = total - done;
     }
 
-    function getSortedItems() {
-      const copy = [...items];
+    function getItemsWithOriginalIndex() {
+      return items.map((item, index) => ({ item, originalIndex: index }));
+    }
+
+    function getSortedEntries() {
+      const entries = getItemsWithOriginalIndex();
 
       if (sortMode === "alphabetical") {
-        return copy.sort((a, b) => a.name.localeCompare(b.name, "de"));
+        return entries.sort((a, b) => a.item.name.localeCompare(b.item.name, "de"));
       }
 
-      return copy.sort((a, b) => {
-        if (a.gang !== b.gang) {
-          return a.gang - b.gang;
+      return entries.sort((a, b) => {
+        if (a.item.gang !== b.item.gang) {
+          return a.item.gang - b.item.gang;
         }
 
-        return a.name.localeCompare(b.name, "de");
+        return a.originalIndex - b.originalIndex;
       });
     }
 
@@ -564,19 +611,25 @@
     }
 
     function renderByGang() {
-      const sorted = getSortedItems();
+      const entries = getSortedEntries();
 
       gangs.forEach(gang => {
-        const gangItems = sorted.filter(item => item.gang === gang);
+        const gangEntries = entries.filter(entry => entry.item.gang === gang);
 
-        if (gangItems.length === 0) {
+        if (gangEntries.length === 0) {
           return;
         }
 
-        const section = createSection("Gang " + gang, gang, gangItems.length);
+        const section = createSection("Gang " + gang, gang, gangEntries.length);
 
-        gangItems.forEach(item => {
-          section.appendChild(createItem(item, false));
+        gangEntries.forEach((entry, positionInGang) => {
+          section.appendChild(
+            createItem(entry.item, false, {
+              showMoveButtons: true,
+              canMoveUp: positionInGang > 0,
+              canMoveDown: positionInGang < gangEntries.length - 1
+            })
+          );
         });
 
         shoppingList.appendChild(section);
@@ -586,8 +639,14 @@
     function renderAlphabetical() {
       const section = createSection("Alphabetisch", "A–Z", items.length);
 
-      getSortedItems().forEach(item => {
-        section.appendChild(createItem(item, true));
+      getSortedEntries().forEach(entry => {
+        section.appendChild(
+          createItem(entry.item, true, {
+            showMoveButtons: false,
+            canMoveUp: false,
+            canMoveDown: false
+          })
+        );
       });
 
       shoppingList.appendChild(section);
@@ -608,9 +667,16 @@
       return section;
     }
 
-    function createItem(item, showGang) {
+    function createItem(item, showGang, options) {
       const article = document.createElement("article");
       article.className = item.done ? "item done" : "item";
+
+      const moveButtonsHtml = options.showMoveButtons
+        ? `
+          <button class="move move-up" type="button" aria-label="Nach oben" ${options.canMoveUp ? "" : "disabled"}>↑</button>
+          <button class="move move-down" type="button" aria-label="Nach unten" ${options.canMoveDown ? "" : "disabled"}>↓</button>
+        `
+        : "";
 
       article.innerHTML = `
         <button class="check" type="button" aria-label="Abhaken">✓</button>
@@ -618,7 +684,8 @@
           <strong class="item-name"></strong>
           <span class="item-meta"></span>
         </div>
-        <div class="actions">
+        <div class="actions ${options.showMoveButtons ? "" : "alphabetical"}">
+          ${moveButtonsHtml}
           <button class="edit" type="button" aria-label="Bearbeiten">✎</button>
           <button class="delete" type="button" aria-label="Löschen">×</button>
         </div>
@@ -633,6 +700,17 @@
         renderList();
       });
 
+      const upButton = article.querySelector(".move-up");
+      const downButton = article.querySelector(".move-down");
+
+      if (upButton) {
+        upButton.addEventListener("click", () => moveItemWithinGang(item.id, "up"));
+      }
+
+      if (downButton) {
+        downButton.addEventListener("click", () => moveItemWithinGang(item.id, "down"));
+      }
+
       article.querySelector(".edit").addEventListener("click", () => {
         editItem(item.id);
       });
@@ -644,6 +722,64 @@
       return article;
     }
 
+    function moveItemWithinGang(id, direction) {
+      const currentIndex = items.findIndex(item => item.id === id);
+
+      if (currentIndex === -1) {
+        return;
+      }
+
+      const currentItem = items[currentIndex];
+      const sameGangIndexes = items
+        .map((item, index) => ({ item, index }))
+        .filter(entry => entry.item.gang === currentItem.gang)
+        .map(entry => entry.index);
+
+      const position = sameGangIndexes.indexOf(currentIndex);
+
+      if (position === -1) {
+        return;
+      }
+
+      const targetPosition = direction === "up" ? position - 1 : position + 1;
+
+      if (targetPosition < 0 || targetPosition >= sameGangIndexes.length) {
+        return;
+      }
+
+      const targetIndex = sameGangIndexes[targetPosition];
+
+      const temp = items[currentIndex];
+      items[currentIndex] = items[targetIndex];
+      items[targetIndex] = temp;
+
+      saveItems();
+      renderList();
+    }
+
+    function moveItemToEndOfGang(item) {
+      const oldIndex = items.findIndex(entry => entry.id === item.id);
+
+      if (oldIndex === -1) {
+        return;
+      }
+
+      const [removed] = items.splice(oldIndex, 1);
+      let insertIndex = -1;
+
+      items.forEach((entry, index) => {
+        if (entry.gang === removed.gang) {
+          insertIndex = index;
+        }
+      });
+
+      if (insertIndex === -1) {
+        items.push(removed);
+      } else {
+        items.splice(insertIndex + 1, 0, removed);
+      }
+    }
+
     function editItem(id) {
       const item = items.find(entry => entry.id === id);
 
@@ -651,6 +787,7 @@
         return;
       }
 
+      const oldGang = item.gang;
       const newName = prompt("Artikel bearbeiten:", item.name);
 
       if (newName === null) {
@@ -675,6 +812,10 @@
       item.name = trimmedName;
       item.gang = newGang;
 
+      if (newGang !== oldGang) {
+        moveItemToEndOfGang(item);
+      }
+
       saveItems();
       renderList();
     }
@@ -698,7 +839,7 @@
     function exportItems() {
       const data = {
         app: "Einkaufsliste",
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
         items
       };
