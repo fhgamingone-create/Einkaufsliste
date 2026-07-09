@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Einkaufsliste nach Gang</title>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <main class="app">
+    <header class="header">
+      <div class="header-icon">🛒</div>
+      <h1>Einkaufsliste</h1>
+      <p>Sortiere deine Artikel nach Gang-Reihenfolge oder alphabetisch.</p>
+    </header>
+
+    <section class="card">
+      <form id="itemForm" class="form">
+        <div class="field">
+          <label for="itemName">Artikel</label>
+          <input
+            id="itemName"
+            type="text"
+            placeholder="z. B. Milch, Bananen, Brot"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <div class="field">
+          <label for="itemAisle">Gang</label>
+          <select id="itemAisle" required></select>
+        </div>
+
+        <button type="submit" class="primary-button">Hinzufügen</button>
+      </form>
+    </section>
+
+    <section class="toolbar">
+      <div class="toolbar-group">
+        <label for="sortMode">Sortierung</label>
+        <select id="sortMode">
+          <option value="aisle">Nach Gang</option>
+          <option value="alphabetical">Alphabetisch</option>
+        </select>
+      </div>
+
+      <div class="toolbar-group">
+        <button id="exportButton" type="button" class="secondary-button">Export</button>
+
+        <label class="import-button" for="importFile">
+          Import
+          <input id="importFile" type="file" accept="application/json,.json" />
+        </label>
+
+        <button id="clearDoneButton" type="button" class="secondary-button">Erledigte löschen</button>
+      </div>
+    </section>
+
+    <section class="summary">
+      <span id="itemCount">0 Artikel</span>
+      <span id="doneCount">0 erledigt</span>
+    </section>
+
+    <section id="shoppingList" class="shopping-list"></section>
+  </main>
+
+  <template id="itemTemplate">
+    <article class="item">
+      <label class="item-check">
+        <input type="checkbox" />
+        <span class="item-text">
+          <strong class="item-name"></strong>
+          <small class="item-aisle"></small>
+        </span>
+      </label>
+
+      <div class="item-actions">
+        <button type="button" class="icon-button edit-button" title="Bearbeiten">✏️</button>
+        <button type="button" class="icon-button delete-button" title="Löschen">🗑️</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
