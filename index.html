@@ -554,6 +554,75 @@
       color: white;
     }
 
+
+    .category-label {
+      margin-top: 16px;
+    }
+
+    .category-group {
+      border-bottom: 1px solid var(--border);
+      background: white;
+    }
+
+    .category-group:last-child {
+      border-bottom: 0;
+    }
+
+    .category-toggle {
+      width: 100%;
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 15px;
+      background: #f8fafc;
+      color: var(--text);
+      text-align: left;
+      font-weight: 950;
+    }
+
+    .category-toggle span:first-child {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .category-arrow {
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      background: #e5e7eb;
+      color: #111827;
+      font-size: 0.88rem;
+      transition: transform 0.15s ease;
+    }
+
+    .category-count {
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 850;
+    }
+
+    .category-items {
+      display: none;
+    }
+
+    .category-group.open .category-items {
+      display: block;
+    }
+
+    .category-group.open .category-arrow {
+      transform: rotate(90deg);
+    }
+
+    .category-group .item {
+      box-shadow: none;
+      border-radius: 0;
+    }
+
   </style>
 </head>
 
@@ -600,6 +669,14 @@
         </div>
 
         <div id="gangPicker" class="gang-picker"></div>
+
+        <label for="itemCategory" class="category-label">Unterkategorie optional</label>
+        <input
+          id="itemCategory"
+          type="text"
+          placeholder="z. B. Nudeln"
+          autocomplete="off"
+        />
       </form>
     </section>
 
@@ -630,6 +707,14 @@
       <label>Gang auswählen</label>
       <div id="editGangPicker" class="edit-gang-picker"></div>
 
+      <label for="editItemCategory">Unterkategorie optional</label>
+      <input
+        id="editItemCategory"
+        type="text"
+        placeholder="z. B. Nudeln"
+        autocomplete="off"
+      />
+
       <div class="modal-actions">
         <button id="cancelEditButton" class="cancel-button" type="button">Abbrechen</button>
         <button id="saveEditButton" class="save-button" type="button">Speichern</button>
@@ -647,9 +732,11 @@
     let openJumpIndex = -1;
     let editingItemId = null;
     let selectedEditGang = 1;
+    let collapsedCategories = JSON.parse(localStorage.getItem("einkaufsliste.collapsedCategories.v1") || "{}");
 
     const itemForm = document.querySelector("#itemForm");
     const itemName = document.querySelector("#itemName");
+    const itemCategory = document.querySelector("#itemCategory");
     const gangPicker = document.querySelector("#gangPicker");
     const selectedGangLabel = document.querySelector("#selectedGangLabel");
     const sortButtons = document.querySelectorAll(".sort-button");
@@ -666,6 +753,7 @@
 
     const editModal = document.querySelector("#editModal");
     const editItemName = document.querySelector("#editItemName");
+    const editItemCategory = document.querySelector("#editItemCategory");
     const editGangPicker = document.querySelector("#editGangPicker");
     const cancelEditButton = document.querySelector("#cancelEditButton");
     const saveEditButton = document.querySelector("#saveEditButton");
@@ -689,12 +777,36 @@
     }
 
     function normalizeItem(item) {
+      const name = String(item.name || "").trim();
+      const category = String(item.category || inferCategory(name) || "").trim();
+
       return {
         id: item.id || createId(),
-        name: String(item.name || "").trim(),
+        name,
         gang: Number(item.gang || 1),
-        done: Boolean(item.done)
+        done: Boolean(item.done),
+        category
       };
+    }
+
+    function inferCategory(name) {
+      const lower = String(name || "").toLowerCase();
+
+      if (
+        lower.includes("nudel") ||
+        lower.includes("spaghetti") ||
+        lower.includes("fusilli") ||
+        lower.includes("girandole") ||
+        lower.includes("lasagne") ||
+        lower.includes("orzo") ||
+        lower.includes("resi") ||
+        lower.includes("hörnchen") ||
+        lower.includes("barilla")
+      ) {
+        return "Nudeln";
+      }
+
+      return "";
     }
 
     function saveItems() {
@@ -785,19 +897,106 @@
         }
 
         const section = createSection("Gang " + gang, gang, gangEntries.length);
-
-        gangEntries.forEach((entry, positionInGang) => {
-          section.appendChild(
-            createItem(entry.item, false, {
-              showMoveButtons: true,
-              canMoveUp: positionInGang > 0,
-              canMoveDown: positionInGang < gangEntries.length - 1
-            })
-          );
-        });
+        renderEntriesWithCategories(section, gangEntries, false);
 
         shoppingList.appendChild(section);
       });
+    }
+
+    function renderEntriesWithCategories(section, entries, showGang) {
+      const renderedCategories = new Set();
+
+      entries.forEach(entry => {
+        const category = entry.item.category;
+
+        if (category) {
+          const key = entry.item.gang + "::" + category.toLowerCase();
+
+          if (renderedCategories.has(key)) {
+            return;
+          }
+
+          renderedCategories.add(key);
+
+          const categoryEntries = entries.filter(other =>
+            other.item.gang === entry.item.gang &&
+            other.item.category &&
+            other.item.category.toLowerCase() === category.toLowerCase()
+          );
+
+          section.appendChild(createCategoryGroup(category, categoryEntries, showGang));
+          return;
+        }
+
+        const sameGangEntries = entries.filter(other => other.item.gang === entry.item.gang);
+        const positionInGang = sameGangEntries.findIndex(other => other.item.id === entry.item.id);
+
+        section.appendChild(
+          createItem(entry.item, showGang, {
+            showMoveButtons: !showGang,
+            canMoveUp: positionInGang > 0,
+            canMoveDown: positionInGang < sameGangEntries.length - 1
+          })
+        );
+      });
+    }
+
+    function createCategoryGroup(category, entries, showGang) {
+      const group = document.createElement("div");
+      const key = createCategoryKey(entries[0].item.gang, category);
+      const isCollapsed = Boolean(collapsedCategories[key]);
+
+      group.className = isCollapsed ? "category-group" : "category-group open";
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "category-toggle";
+      button.innerHTML = `
+        <span>
+          <span class="category-arrow">›</span>
+          <span>${category}</span>
+        </span>
+        <span class="category-count">${entries.length}</span>
+      `;
+
+      const content = document.createElement("div");
+      content.className = "category-items";
+
+      button.addEventListener("click", () => {
+        collapsedCategories[key] = !collapsedCategories[key];
+
+        if (!collapsedCategories[key]) {
+          delete collapsedCategories[key];
+        }
+
+        localStorage.setItem("einkaufsliste.collapsedCategories.v1", JSON.stringify(collapsedCategories));
+        group.classList.toggle("open", !collapsedCategories[key]);
+      });
+
+      entries.forEach(entry => {
+        const sameGangEntries = items
+          .map((item, index) => ({ item, originalIndex: index }))
+          .filter(other => other.item.gang === entry.item.gang);
+
+        const positionInGang = sameGangEntries.findIndex(other => other.item.id === entry.item.id);
+
+        content.appendChild(
+          createItem(entry.item, showGang, {
+            showMoveButtons: !showGang,
+            canMoveUp: positionInGang > 0,
+            canMoveDown: positionInGang < sameGangEntries.length - 1
+          })
+        );
+      });
+
+      group.appendChild(button);
+      group.appendChild(content);
+
+      return group;
+    }
+
+    function createCategoryKey(gang, category) {
+      return "gang-" + gang + "::" + category.toLowerCase();
     }
 
     function renderAlphabetical() {
@@ -831,6 +1030,18 @@
       return section;
     }
 
+    function createItemMeta(item, showGang) {
+      if (showGang) {
+        return item.category ? "Gang " + item.gang + " · " + item.category : "Gang " + item.gang;
+      }
+
+      if (item.category) {
+        return item.done ? "erledigt · " + item.category : "offen · " + item.category;
+      }
+
+      return item.done ? "erledigt" : "offen";
+    }
+
     function createItem(item, showGang, options) {
       const article = document.createElement("article");
       article.className = item.done ? "item done" : "item";
@@ -861,7 +1072,7 @@
       `;
 
       article.querySelector(".item-name").textContent = item.name;
-      article.querySelector(".item-meta").textContent = showGang ? "Gang " + item.gang : (item.done ? "erledigt" : "offen");
+      article.querySelector(".item-meta").textContent = createItemMeta(item, showGang);
 
       article.querySelector(".check").addEventListener("click", () => {
         item.done = !item.done;
@@ -959,6 +1170,7 @@
       editingItemId = id;
       selectedEditGang = item.gang;
       editItemName.value = item.name;
+      editItemCategory.value = item.category || "";
 
       renderEditGangPicker();
       openEditModal();
@@ -1021,6 +1233,7 @@
 
       item.name = trimmedName;
       item.gang = selectedEditGang;
+      item.category = editItemCategory.value.trim();
 
       if (selectedEditGang !== oldGang) {
         moveItemToEndOfGang(item);
@@ -1157,7 +1370,8 @@
         id: createId(),
         name,
         gang: selectedGang,
-        done: false
+        done: false,
+        category: itemCategory.value.trim() || inferCategory(name)
       });
 
       saveItems();
