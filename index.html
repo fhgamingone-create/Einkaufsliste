@@ -618,6 +618,19 @@
       transform: rotate(90deg);
     }
 
+    .category-group.all-done .category-arrow {
+      background: var(--accent);
+      color: white;
+    }
+
+    .category-group.all-done .category-toggle {
+      background: #f0fdf4;
+    }
+
+    .category-group.all-done .category-count {
+      color: var(--accent-dark);
+    }
+
     .category-group .item {
       box-shadow: none;
       border-radius: 0;
@@ -946,7 +959,12 @@
       const key = createCategoryKey(entries[0].item.gang, category);
       const isCollapsed = Boolean(collapsedCategories[key]);
 
+      const allDone = entries.every(entry => entry.item.done);
       group.className = isCollapsed ? "category-group" : "category-group open";
+
+      if (allDone) {
+        group.classList.add("all-done");
+      }
 
       const button = document.createElement("button");
       button.type = "button";
