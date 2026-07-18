@@ -636,6 +636,38 @@
       border-radius: 0;
     }
 
+
+    .fireworks-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 120;
+    }
+
+    .celebration-banner {
+      position: fixed;
+      left: 50%;
+      top: 22px;
+      transform: translateX(-50%) translateY(-14px);
+      z-index: 121;
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: rgba(17, 24, 39, 0.92);
+      color: white;
+      font-weight: 900;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .celebration-banner.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
   </style>
 </head>
 
@@ -735,6 +767,12 @@
     </div>
   </div>
 
+
+  <canvas id="fireworksCanvas" class="fireworks-canvas" aria-hidden="true"></canvas>
+  <div id="celebrationBanner" class="celebration-banner" aria-hidden="true">
+    🎉 Alles erledigt! Super gemacht!
+  </div>
+
   <script>
     const STORAGE_KEY = "einkaufsliste.app.ohne.erledigte.loeschen.v1";
     const gangs = [1,2,3,4,5,6,7,8,9,10];
@@ -746,6 +784,8 @@
     let editingItemId = null;
     let selectedEditGang = 1;
     let collapsedCategories = JSON.parse(localStorage.getItem("einkaufsliste.collapsedCategories.v1") || "{}");
+    let lastAllDoneState = items.length > 0 && items.every(item => item.done);
+    let fireworksTimeout = null;
 
     const itemForm = document.querySelector("#itemForm");
     const itemName = document.querySelector("#itemName");
@@ -770,6 +810,9 @@
     const editGangPicker = document.querySelector("#editGangPicker");
     const cancelEditButton = document.querySelector("#cancelEditButton");
     const saveEditButton = document.querySelector("#saveEditButton");
+
+    const fireworksCanvas = document.querySelector("#fireworksCanvas");
+    const celebrationBanner = document.querySelector("#celebrationBanner");
 
     function createId() {
       return crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random();
@@ -881,6 +924,7 @@
     function renderList() {
       shoppingList.innerHTML = "";
       renderStats();
+      checkAllDoneCelebration();
 
       if (items.length === 0) {
         shoppingList.innerHTML = `
@@ -1373,6 +1417,125 @@
       });
 
       reader.readAsText(file);
+    }
+
+
+    function checkAllDoneCelebration() {
+      const allDone = items.length > 0 && items.every(item => item.done);
+
+      if (allDone && !lastAllDoneState) {
+        launchCelebration();
+      }
+
+      lastAllDoneState = allDone;
+    }
+
+    function launchCelebration() {
+      if (!fireworksCanvas) {
+        return;
+      }
+
+      const canvas = fireworksCanvas;
+      const ctx = canvas.getContext("2d");
+      const particles = [];
+      const colors = ["#22c55e", "#60a5fa", "#f59e0b", "#ef4444", "#a855f7", "#f97316"];
+      const duration = 3600;
+      const startTime = performance.now();
+      const burstTimes = [0, 1100, 2200];
+      const firedBursts = new Set();
+
+      function resizeCanvas() {
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(window.innerWidth * ratio);
+        canvas.height = Math.floor(window.innerHeight * ratio);
+        canvas.style.width = window.innerWidth + "px";
+        canvas.style.height = window.innerHeight + "px";
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      }
+
+      resizeCanvas();
+
+      function burst(x, y) {
+        for (let i = 0; i < 34; i++) {
+          const angle = (Math.PI * 2 * i) / 34 + Math.random() * 0.18;
+          const speed = 1.8 + Math.random() * 4.2;
+
+          particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1,
+            size: 2 + Math.random() * 3.4,
+            color: colors[Math.floor(Math.random() * colors.length)]
+          });
+        }
+      }
+
+      function fireWave() {
+        for (let i = 0; i < 5; i++) {
+          burst(
+            50 + Math.random() * Math.max(140, window.innerWidth - 100),
+            80 + Math.random() * Math.max(140, window.innerHeight * 0.48)
+          );
+        }
+      }
+
+      celebrationBanner.classList.add("show");
+      celebrationBanner.setAttribute("aria-hidden", "false");
+
+      if (fireworksTimeout) {
+        clearTimeout(fireworksTimeout);
+      }
+
+      fireworksTimeout = window.setTimeout(() => {
+        celebrationBanner.classList.remove("show");
+        celebrationBanner.setAttribute("aria-hidden", "true");
+      }, 3600);
+
+      function frame(now) {
+        const elapsed = now - startTime;
+
+        burstTimes.forEach((time, index) => {
+          if (elapsed >= time && !firedBursts.has(index)) {
+            firedBursts.add(index);
+            fireWave();
+          }
+        });
+
+        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+        particles.forEach((p) => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.035;
+          p.vx *= 0.994;
+          p.vy *= 0.994;
+          p.life -= 0.009;
+
+          ctx.globalAlpha = Math.max(p.life, 0);
+          ctx.beginPath();
+          ctx.fillStyle = p.color;
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+          if (particles[i].life <= 0) {
+            particles.splice(i, 1);
+          }
+        }
+
+        ctx.globalAlpha = 1;
+
+        if (elapsed < duration || particles.length > 0) {
+          requestAnimationFrame(frame);
+        } else {
+          ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+        }
+      }
+
+      requestAnimationFrame(frame);
     }
 
     itemForm.addEventListener("submit", event => {
